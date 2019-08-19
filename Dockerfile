@@ -37,6 +37,7 @@ RUN apt-get install -y \
 ## Install nnstreamer and related
 RUN apt-get install -y \
       meson \
+      ninja-build \
       libgst-dev \
       libgstreamer1.0-dev \
       libgstreamer-plugins-base1.0-dev \
