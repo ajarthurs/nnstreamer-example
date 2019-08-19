@@ -58,6 +58,8 @@ RUN apt-get install -y \
 
 ## Install a VNC-accessible desktop environment. Needed to see video output from example.
 RUN apt-get install -y \
+  xorg \
+  xterm \
   lxde-core \
   tigervnc-standalone-server
 
