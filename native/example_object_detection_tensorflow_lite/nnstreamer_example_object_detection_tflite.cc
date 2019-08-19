@@ -463,6 +463,7 @@ nms (std::vector<DetectedObject> &detected)
 static void
 get_detected_objects (gfloat * detections, gfloat * boxes)
 {
+  _print_log("called get_detected_objects");
   const float threshold_score = .5f;
   std::vector<DetectedObject> detected;
 
@@ -528,6 +529,7 @@ new_data_cb (GstElement * element, GstBuffer * buffer, gpointer user_data)
   GstMapInfo info_boxes, info_detections;
   gfloat *boxes, *detections;
 
+  _print_log("tensor_sink called new_data_cb callback");
   g_return_if_fail (g_app.running);
 
   /**
@@ -608,6 +610,8 @@ draw_overlay_cb (GstElement * overlay, cairo_t * cr, guint64 timestamp,
   gchar *label;
   guint drawed = 0;
 
+  _print_log("called draw_overlay_cb");
+
   g_return_if_fail (state->valid);
   g_return_if_fail (g_app.running);
 
@@ -633,6 +637,7 @@ draw_overlay_cb (GstElement * overlay, cairo_t * cr, guint64 timestamp,
     height = iter->height * VIDEO_HEIGHT / MODEL_HEIGHT;
 
     /* draw rectangle */
+    _print_log("draw_overlay_cb: drawing rectangle");
     cairo_rectangle (cr, x, y, width, height);
     cairo_set_source_rgb (cr, 1, 0, 0);
     cairo_set_line_width (cr, 1.5);
