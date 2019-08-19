@@ -707,6 +707,7 @@ main (int argc, char ** argv)
   _print_log ("%s\n", str_pipeline);
 
   g_app.pipeline = gst_parse_launch (str_pipeline, NULL);
+  GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(g_app.pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "pipeline");
   g_free (str_pipeline);
   _check_cond_err (g_app.pipeline != NULL);
 

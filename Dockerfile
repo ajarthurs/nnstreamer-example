@@ -30,6 +30,7 @@ RUN apt-get --reinstall install -y man-db coreutils
 ## Install some useful supplemental tools
 RUN apt-get install -y \
       git \
+      graphviz \
       ssat \
       wget \
       vim

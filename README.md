@@ -21,7 +21,11 @@ This fork demonstrates object-detection in a sample video using TF-Lite and NNSt
 - At the VNC client, type the following inside the Xterm window.
 - `cd /usr/local/bin`
 - `sh get-model-object-detection-tflite.sh`
-- `./nnstreamer_example_object_detection_tflite`
+- `GST_DEBUG_DUMP_DOT_DIR=/tmp ./nnstreamer_example_object_detection_tflite`
+
+## (Optional. Convert pipeline DOT output).
+- `dot -Tpdf /tmp/pipeline.dot > /demo/pipeline.pdf`
+- Note that in the Docker image, `/demo` is mounted to `<WORKSPACE>` on the host. On the host, you may access `<WORKSPACE>/pipeline.pdf`.
 
 ## Shutdown:
 - Close Xterm window, which will shutdown the session.
