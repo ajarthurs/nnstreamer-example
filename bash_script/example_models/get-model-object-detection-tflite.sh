@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-wget https://www.dropbox.com/s/vljcvgsvdy52s85/sample_720p.mp4?dl=0
+wget https://www.dropbox.com/s/vljcvgsvdy52s85/sample_720p.mp4
 mkdir -p tflite_model
 cd tflite_model
 wget https://github.com/nnsuite/testcases/raw/master/DeepLearningModels/tensorflow-lite/ssd_mobilenet_v2_coco/ssd_mobilenet_v2_coco.tflite
