@@ -67,9 +67,12 @@ RUN apt-get install -y \
 RUN ACCEPT_EULA=Y apt-get install -y ubuntu-restricted-extras
 
 ## Install nnstreamer demos using a fork of https://github.com/nnsuite/nnstreamer-example
-RUN git clone https://github.com/ajarthurs/nnstreamer-example.git /demo
-WORKDIR /demo
+RUN mkdir /src
+RUN mkdir /demo
+RUN git clone https://github.com/ajarthurs/nnstreamer-example.git /src/nnstreamer-example
+WORKDIR /src/nnstreamer-example
 RUN git checkout od-tflite-video-demo
 RUN meson build && \
     ninja -C build install && \
     echo "DEMOS INSTALLED"
+WORKDIR /demo
