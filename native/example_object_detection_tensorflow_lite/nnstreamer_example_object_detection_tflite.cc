@@ -694,7 +694,7 @@ main (int argc, char ** argv)
   /* init pipeline */
   str_pipeline =
       g_strdup_printf
-      ("v4l2src name=src ! videoconvert ! videoscale ! "
+      ("filesrc location=sample_720p.mp4 ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! "
       "video/x-raw,width=%d,height=%d,format=RGB ! tee name=t_raw "
       "t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! ximagesink name=img_tensor "
       "t_raw. ! queue leaky=2 max-size-buffers=2 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter ! "
