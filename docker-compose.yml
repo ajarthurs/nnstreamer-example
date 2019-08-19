@@ -1,0 +1,13 @@
+version: '2.0'
+
+services:
+  nnstreamer-demo:
+    build:
+      context: .
+    volumes:
+      - '${PWD}:/demo'
+    stdin_open: true
+    tty: true
+    entrypoint: /demo/docker_entrypoint.bash
+    ports:
+      - "127.0.0.1:5900:5900"
