@@ -6,6 +6,6 @@ wget 'https://gcs-vimeo.akamaized.net/exp=1566417848~acl=%2A%2F792677904.mp4%2A~
 # Model
 mkdir -p tflite_model
 cd tflite_model
-wget https://github.com/nnsuite/testcases/raw/master/DeepLearningModels/tensorflow-lite/ssd_mobilenet_v2_coco/ssd_mobilenet_v2_coco.tflite
+wget 'https://www.dropbox.com/s/l2ryee8ikbx1as1/float32.tflite?dl=0' -O ssd_mobilenet_v1_coco.tflite
 wget https://github.com/nnsuite/testcases/raw/master/DeepLearningModels/tensorflow-lite/ssd_mobilenet_v2_coco/coco_labels_list.txt
 wget https://github.com/nnsuite/testcases/raw/master/DeepLearningModels/tensorflow-lite/ssd_mobilenet_v2_coco/box_priors.txt

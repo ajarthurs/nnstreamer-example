@@ -15,7 +15,7 @@
  * $ ./nnstreamer_example_object_detection_tflite
  *
  * Required model and resources are stored at below link
- * https://github.com/nnsuite/testcases/tree/master/DeepLearningModels/tensorflow-lite/ssd_mobilenet_v2_coco
+ * https://www.dropbox.com/s/l2ryee8ikbx1as1/float32.tflite?dl=0 -> ssd_mobilenet_v1_coco
  */
 
 #ifndef _GNU_SOURCE
@@ -208,7 +208,7 @@ tflite_load_labels (TFLiteModelInfo * tflite_info)
 static gboolean
 tflite_init_info (TFLiteModelInfo * tflite_info, const gchar * path)
 {
-  const gchar tflite_model[] = "ssd_mobilenet_v2_coco.tflite";
+  const gchar tflite_model[] = "ssd_mobilenet_v1_coco.tflite";
   const gchar tflite_label[] = "coco_labels_list.txt";
   const gchar tflite_box_priors[] = "box_priors.txt";
 
