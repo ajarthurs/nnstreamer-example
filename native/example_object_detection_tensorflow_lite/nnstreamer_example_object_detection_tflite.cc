@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <glib.h>
 #include <gst/gst.h>
+#include <gst/app/gstappsink.h>
 #include <gst/video/video.h>
 
 #include <cstring>
