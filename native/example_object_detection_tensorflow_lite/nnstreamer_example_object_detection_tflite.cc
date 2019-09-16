@@ -97,6 +97,9 @@ const gchar tflite_label[] = "coco_labels_list.txt";
 //#define MAX_OBJECT_DETECTION 5
 #define MAX_OBJECT_DETECTION 999999
 
+const bool FRAME_STEP = TRUE;
+//const bool FRAME_STEP = FALSE;
+
 typedef struct
 {
   gint x;
@@ -138,6 +141,8 @@ typedef struct
   TFLiteModelInfo tflite_info; /**< tflite model info */
   CairoOverlayState overlay_state;
   std::vector<DetectedObject> detected_objects;
+  GstElement *tensor_sink;
+  GstElement *tensor_res;
 } AppData;
 
 /**
@@ -298,6 +303,16 @@ free_app_data (void)
     g_app.bus = NULL;
   }
 
+  if (g_app.tensor_sink) {
+    gst_object_unref (g_app.tensor_sink);
+    g_app.tensor_sink = NULL;
+  }
+
+  if (g_app.tensor_res) {
+    gst_object_unref (g_app.tensor_res);
+    g_app.tensor_res = NULL;
+  }
+
   if (g_app.pipeline) {
     gst_object_unref (g_app.pipeline);
     g_app.pipeline = NULL;
@@ -349,44 +364,8 @@ parse_qos_message (GstMessage * message)
   guint64 dropped;
 
   gst_message_parse_qos_stats (message, &format, &processed, &dropped);
-  _print_log ("format[%d] processed[%" G_GUINT64_FORMAT "] dropped[%"
-      G_GUINT64_FORMAT "]", format, processed, dropped);
-}
-
-/**
- * @brief Callback for message.
- */
-static void
-bus_message_cb (GstBus * bus, GstMessage * message, gpointer user_data)
-{
-  switch (GST_MESSAGE_TYPE (message)) {
-    case GST_MESSAGE_EOS:
-      _print_log ("received eos message");
-      g_main_loop_quit (g_app.loop);
-      break;
-
-    case GST_MESSAGE_ERROR:
-      _print_log ("received error message");
-      parse_err_message (message);
-      g_main_loop_quit (g_app.loop);
-      break;
-
-    case GST_MESSAGE_WARNING:
-      _print_log ("received warning message");
-      parse_err_message (message);
-      break;
-
-    case GST_MESSAGE_STREAM_START:
-      _print_log ("received start message");
-      break;
-
-    case GST_MESSAGE_QOS:
-      parse_qos_message (message);
-      break;
-
-    default:
-      break;
-  }
+  _print_log ("%s: format[%d] processed[%" G_GUINT64_FORMAT "] dropped[%"
+      G_GUINT64_FORMAT "]", GST_MESSAGE_SRC_NAME(message), format, processed, dropped);
 }
 
 /**
@@ -674,6 +653,92 @@ draw_overlay_cb (GstElement * overlay, cairo_t * cr, guint64 timestamp,
 }
 
 /**
+ * @brief Callback for message.
+ */
+static void
+bus_message_cb (GstBus * bus, GstMessage * message, gpointer user_data)
+{
+  switch (GST_MESSAGE_TYPE (message)) {
+    case GST_MESSAGE_STREAM_START: {
+      _print_log ("%s: received stream-start message", GST_MESSAGE_SRC_NAME(message));
+      if (FRAME_STEP) {
+        if (gst_element_send_event(
+              g_app.pipeline,
+              gst_event_new_step(
+                GST_FORMAT_BUFFERS, // step format (frames)
+                1,                  // step value
+                1.0,                // data rate
+                TRUE,               // flush
+                FALSE               // intermediate
+                ))) {
+          _print_log("sent step event");
+        } else {
+          g_warning("failed to send step event");
+        }
+      }
+    } break;
+
+    case GST_MESSAGE_ASYNC_DONE: {
+      _print_log ("%s: received async-done message", GST_MESSAGE_SRC_NAME(message));
+    } break;
+
+    case GST_MESSAGE_STEP_DONE: {
+      _print_log ("%s: received step-done message", GST_MESSAGE_SRC_NAME(message));
+      if (GST_MESSAGE_SRC(message) == (GstObject *)g_app.tensor_sink) {
+        GstSample *sample;
+        sample = gst_app_sink_pull_preroll((GstAppSink *)g_app.tensor_sink);
+        new_data_cb(g_app.tensor_sink, gst_sample_get_buffer(sample), user_data);
+        gst_sample_unref(sample);
+        _print_log("fetched sample from preroll");
+        //gst_element_set_state (g_app.pipeline, GST_STATE_PLAYING);
+        //g_usleep(1e6);
+        //gst_element_set_state (g_app.pipeline, GST_STATE_PAUSED);
+        if (gst_element_send_event(
+              g_app.pipeline,
+              gst_event_new_step(
+                GST_FORMAT_BUFFERS, // step format (frames)
+                1,                  // step value
+                1.0,                // data rate
+                TRUE,               // flush
+                FALSE               // intermediate
+                ))) {
+          _print_log("sent step event");
+        } else {
+          g_warning("failed to send step event");
+        }
+      }
+    } break;
+
+    case GST_MESSAGE_EOS:
+      _print_log ("%s: received eos message", GST_MESSAGE_SRC_NAME(message));
+      g_main_loop_quit (g_app.loop);
+      break;
+
+    case GST_MESSAGE_ERROR:
+      _print_log ("%s: received error message", GST_MESSAGE_SRC_NAME(message));
+      parse_err_message (message);
+      g_main_loop_quit (g_app.loop);
+      break;
+
+    case GST_MESSAGE_WARNING:
+      _print_log ("%s: received warning message", GST_MESSAGE_SRC_NAME(message));
+      parse_err_message (message);
+      break;
+
+    case GST_MESSAGE_QOS:
+      parse_qos_message (message);
+      break;
+
+    default:
+      _print_log ("%s: received unhandled message: %s",
+          GST_MESSAGE_SRC_NAME(message),
+          GST_MESSAGE_TYPE_NAME(message)
+          );
+      break;
+  }
+}
+
+/**
  * @brief Main function.
  */
 int
@@ -684,7 +749,6 @@ main (int argc, char ** argv)
   //const gchar str_video_file[] = "/demo/sample_1080p_rate0p125.mp4";
 
   gchar *str_pipeline;
-  GstElement *element;
 
   _print_log ("start app..");
 
@@ -710,13 +774,30 @@ main (int argc, char ** argv)
       g_strdup_printf
       ("filesrc location=%s ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! "
       "video/x-raw,width=%d,height=%d,format=RGB ! tee name=t_raw "
-      "t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! ximagesink name=img_tensor "
-      "t_raw. ! queue leaky=2 max-size-buffers=2 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter ! "
-      "tensor_transform mode=arithmetic option=typecast:float32,add:-127.5,div:127.5 ! "
-      "tensor_filter framework=tensorflow-lite model=%s ! "
-      "tensor_sink name=tensor_sink",
-      VIDEO_WIDTH, VIDEO_HEIGHT, MODEL_WIDTH, MODEL_HEIGHT,
-      g_app.tflite_info.model_path);
+      //"t_raw. ! videoconvert ! cairooverlay name=tensor_res ! "
+      "t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! "
+        //"videoconvert ! video/x-raw,format=(string)I420 ! x264enc ! mux.video_0 qtmux name=mux ! filesink location=detected.mp4 "
+        "ximagesink name=img_tensor "
+        //"ximagesink name=img_tensor",
+        //"fakesink "
+      "t_raw. ! queue ! videoconvert ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=false ! "
+      //"t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=false ! "
+      //"t_raw. ! queue max-size-buffers=2 leaky=2 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter ! "
+        "tensor_transform mode=arithmetic option=typecast:float32,add:-127.5,div:127.5 ! "
+        "tensor_filter framework=tensorflow-lite model=%s ! "
+        //"tensor_filter framework=tensorflow model=%s "
+        //"input=1:%d:%d:3 inputname=normalized_input_image_tensor inputtype=float32 "
+        //"output=1:%d:%d,1:%d:%d outputname=raw_outputs/box_encodings,scale_logits outputtype=float32,float32 ! "
+        //"tensor_sink name=tensor_sink emit_signal=true signal_rate=0",
+        "appsink name=tensor_sink",
+      str_video_file,
+      VIDEO_WIDTH, VIDEO_HEIGHT,
+      MODEL_WIDTH, MODEL_HEIGHT
+      //);
+      ,g_app.tflite_info.model_path);
+      //g_app.tflite_info.model_path,
+      //MODEL_WIDTH, MODEL_HEIGHT,
+      //DETECTION_MAX, BOX_SIZE, DETECTION_MAX, LABEL_SIZE);
 
   _print_log ("%s\n", str_pipeline);
 
@@ -733,19 +814,23 @@ main (int argc, char ** argv)
   g_signal_connect (g_app.bus, "message", G_CALLBACK (bus_message_cb), NULL);
 
   /* tensor sink signal : new data callback */
-  element = gst_bin_get_by_name (GST_BIN (g_app.pipeline), "tensor_sink");
-  g_signal_connect (element, "new-data", G_CALLBACK (new_data_cb), NULL);
-  gst_object_unref (element);
+  g_app.tensor_sink = gst_bin_get_by_name(GST_BIN (g_app.pipeline), "tensor_sink");
+  //g_signal_connect (g_app.tensor_sink, "new-data", G_CALLBACK (new_data_cb), NULL);
+  //g_signal_connect (g_app.tensor_sink, "new-sample", G_CALLBACK (new_sample_cb), NULL);
+  //g_signal_connect (g_app.tensor_sink, "new-preroll", G_CALLBACK (new_sample_cb), NULL);
 
   /* cairo overlay */
-  element = gst_bin_get_by_name (GST_BIN (g_app.pipeline), "tensor_res");
-  g_signal_connect (element, "draw", G_CALLBACK (draw_overlay_cb), NULL);
-  g_signal_connect (element, "caps-changed", G_CALLBACK (prepare_overlay_cb),
+  g_app.tensor_res = gst_bin_get_by_name (GST_BIN (g_app.pipeline), "tensor_res");
+  g_signal_connect (g_app.tensor_res, "draw", G_CALLBACK (draw_overlay_cb), NULL);
+  g_signal_connect (g_app.tensor_res, "caps-changed", G_CALLBACK (prepare_overlay_cb),
       NULL);
-  gst_object_unref (element);
 
   /* start pipeline */
-  gst_element_set_state (g_app.pipeline, GST_STATE_PLAYING);
+  if (FRAME_STEP)
+    gst_element_set_state (g_app.pipeline, GST_STATE_PAUSED);
+    //gst_element_set_state (g_app.pipeline, GST_STATE_PLAYING);
+  else // normal playback
+    gst_element_set_state (g_app.pipeline, GST_STATE_PLAYING);
   g_app.running = TRUE;
 
   /* set window title */
@@ -756,20 +841,21 @@ main (int argc, char ** argv)
 
   /* quit when received eos or error message */
   g_app.running = FALSE;
-
-  /* cam source element */
-  element = gst_bin_get_by_name (GST_BIN (g_app.pipeline), "src");
-
-  gst_element_set_state (element, GST_STATE_READY);
-  gst_element_set_state (g_app.pipeline, GST_STATE_READY);
-
-  g_usleep (200 * 1000);
-
-  gst_element_set_state (element, GST_STATE_NULL);
   gst_element_set_state (g_app.pipeline, GST_STATE_NULL);
 
+  ///* cam source element */
+  //element = gst_bin_get_by_name (GST_BIN (g_app.pipeline), "src");
+
+  //gst_element_set_state (element, GST_STATE_READY);
+  //gst_element_set_state (g_app.pipeline, GST_STATE_READY);
+
   g_usleep (200 * 1000);
-  gst_object_unref (element);
+
+  //gst_element_set_state (element, GST_STATE_NULL);
+  //gst_element_set_state (g_app.pipeline, GST_STATE_NULL);
+
+  //g_usleep (200 * 1000);
+  //gst_object_unref (element);
 
 error:
   _print_log ("close app..");
