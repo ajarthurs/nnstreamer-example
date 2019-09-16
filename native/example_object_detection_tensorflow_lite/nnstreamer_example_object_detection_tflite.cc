@@ -94,7 +94,8 @@ const gchar tflite_label[] = "coco_labels_list.txt";
 /**
  * @brief Max objects in display.
  */
-#define MAX_OBJECT_DETECTION 5
+//#define MAX_OBJECT_DETECTION 5
+#define MAX_OBJECT_DETECTION 999999
 
 typedef struct
 {
