@@ -402,7 +402,7 @@ iou (DetectedObject &A, DetectedObject &B)
 static void
 nms (std::vector<DetectedObject> &detected)
 {
-  const float threshold_iou = .5f;
+  const float threshold_iou = 0.5f;
   guint boxes_size;
   guint i, j;
 
@@ -455,15 +455,15 @@ static void
 get_detected_objects (gfloat * detections, gfloat * boxes)
 {
   _print_log("called get_detected_objects");
-  const float threshold_score = .5f;
+  const float threshold_score = 0.5f;
   std::vector<DetectedObject> detected;
 
   for (int d = 0; d < DETECTION_MAX; d++) {
     float ycenter =
-        boxes[0] / Y_SCALE * g_app.tflite_info.box_priors[2][d] +
+        ((boxes[0] / Y_SCALE) * g_app.tflite_info.box_priors[2][d]) +
         g_app.tflite_info.box_priors[0][d];
     float xcenter =
-        boxes[1] / X_SCALE * g_app.tflite_info.box_priors[3][d] +
+        ((boxes[1] / X_SCALE) * g_app.tflite_info.box_priors[3][d]) +
         g_app.tflite_info.box_priors[1][d];
     float h =
         (float) expf (boxes[2] / H_SCALE) * g_app.tflite_info.box_priors[2][d];
