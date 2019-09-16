@@ -68,14 +68,28 @@
 #define H_SCALE         5.0f
 #define W_SCALE         5.0f
 
-#define VIDEO_WIDTH     640
-#define VIDEO_HEIGHT    480
-#define MODEL_WIDTH     300
-#define MODEL_HEIGHT    300
+//#define VIDEO_WIDTH     640
+//#define VIDEO_HEIGHT    480
+#define VIDEO_WIDTH     1024
+#define VIDEO_HEIGHT    768
+
+//const gchar tflite_model[] = "ssd_mobilenet_v1_coco.tflite";
+//#define MODEL_WIDTH     300
+//#define MODEL_HEIGHT    300
+//#define DETECTION_MAX   1917
+//const gchar tflite_box_priors[] = "box_priors-ssd_mobilenet.txt";
+
+//const gchar tflite_model[] = "ssd_resnet50_v1_fpn_coco.tflite";
+const gchar tflite_model[] = "ssd_mobilenet_v1_fpn_coco.tflite";
+#define MODEL_WIDTH     640
+#define MODEL_HEIGHT    640
+#define DETECTION_MAX   51150
+const gchar tflite_box_priors[] = "box_priors-ssd_fpn.txt";
+
+const gchar tflite_label[] = "coco_labels_list.txt";
 
 #define BOX_SIZE        4
 #define LABEL_SIZE      91
-#define DETECTION_MAX   1917
 
 /**
  * @brief Max objects in display.
@@ -209,10 +223,6 @@ tflite_load_labels (TFLiteModelInfo * tflite_info)
 static gboolean
 tflite_init_info (TFLiteModelInfo * tflite_info, const gchar * path)
 {
-  const gchar tflite_model[] = "ssd_mobilenet_v1_coco.tflite";
-  const gchar tflite_label[] = "coco_labels_list.txt";
-  const gchar tflite_box_priors[] = "box_priors.txt";
-
   g_return_val_if_fail (tflite_info != NULL, FALSE);
 
   tflite_info->model_path = g_strdup_printf ("%s/%s", path, tflite_model);
@@ -669,6 +679,8 @@ int
 main (int argc, char ** argv)
 {
   const gchar tflite_model_path[] = "./tflite_model";
+  const gchar str_video_file[] = "/demo/sample_1080p.mp4";
+  //const gchar str_video_file[] = "/demo/sample_1080p_rate0p125.mp4";
 
   gchar *str_pipeline;
   GstElement *element;
@@ -695,7 +707,7 @@ main (int argc, char ** argv)
   /* init pipeline */
   str_pipeline =
       g_strdup_printf
-      ("filesrc location=sample_1080p.mp4 ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! "
+      ("filesrc location=%s ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! "
       "video/x-raw,width=%d,height=%d,format=RGB ! tee name=t_raw "
       "t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! ximagesink name=img_tensor "
       "t_raw. ! queue leaky=2 max-size-buffers=2 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter ! "
