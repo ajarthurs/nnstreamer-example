@@ -68,23 +68,23 @@
 #define H_SCALE         5.0f
 #define W_SCALE         5.0f
 
-//#define VIDEO_WIDTH     640
-//#define VIDEO_HEIGHT    640
-#define VIDEO_WIDTH     1024
-#define VIDEO_HEIGHT    768
+#define VIDEO_WIDTH     640
+#define VIDEO_HEIGHT    640
+//#define VIDEO_WIDTH     1024
+//#define VIDEO_HEIGHT    768
 
-//const gchar tflite_model[] = "ssd_mobilenet_v1_coco.tflite";
-//#define MODEL_WIDTH     300
-//#define MODEL_HEIGHT    300
-//#define DETECTION_MAX   1917
-//const gchar tflite_box_priors[] = "box_priors-ssd_mobilenet.txt";
+const gchar tflite_model[] = "ssd_mobilenet_v1_coco.tflite";
+#define MODEL_WIDTH     300
+#define MODEL_HEIGHT    300
+#define DETECTION_MAX   1917
+const gchar tflite_box_priors[] = "box_priors-ssd_mobilenet.txt";
 
-//const gchar tflite_model[] = "ssd_resnet50_v1_fpn_coco.tflite";
-const gchar tflite_model[] = "ssd_mobilenet_v1_fpn_coco.tflite";
-#define MODEL_WIDTH     640
-#define MODEL_HEIGHT    640
-#define DETECTION_MAX   51150
-const gchar tflite_box_priors[] = "box_priors-ssd_fpn.txt";
+////const gchar tflite_model[] = "ssd_resnet50_v1_fpn_coco.tflite";
+//const gchar tflite_model[] = "ssd_mobilenet_v1_fpn_coco.tflite";
+//#define MODEL_WIDTH     640
+//#define MODEL_HEIGHT    640
+//#define DETECTION_MAX   51150
+//const gchar tflite_box_priors[] = "box_priors-ssd_fpn.txt";
 
 const gchar tflite_label[] = "coco_labels_list.txt";
 
