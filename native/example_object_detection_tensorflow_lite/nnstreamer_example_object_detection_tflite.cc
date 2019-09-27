@@ -69,7 +69,7 @@
 #define W_SCALE         5.0f
 
 //#define VIDEO_WIDTH     640
-//#define VIDEO_HEIGHT    480
+//#define VIDEO_HEIGHT    640
 #define VIDEO_WIDTH     1024
 #define VIDEO_HEIGHT    768
 
