@@ -700,7 +700,7 @@ bus_message_cb (GstBus * bus, GstMessage * message, gpointer user_data)
       if (GST_MESSAGE_SRC(message) == (GstObject *)g_app.tensor_sink) {
         GstSample *sample;
         sample = gst_app_sink_pull_preroll((GstAppSink *)g_app.tensor_sink);
-        new_data_cb(g_app.tensor_sink, gst_sample_get_buffer(sample), user_data);
+        new_data_cb2(g_app.tensor_sink, gst_sample_get_buffer(sample), user_data);
         gst_sample_unref(sample);
         _print_log("fetched sample from preroll");
         //gst_element_set_state (g_app.pipeline, GST_STATE_PLAYING);
@@ -788,9 +788,9 @@ main (int argc, char ** argv)
       ("filesrc location=%s ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! "
       "video/x-raw,width=%d,height=%d,format=RGB ! tee name=t_raw "
       //"t_raw. ! videoconvert ! cairooverlay name=tensor_res ! "
-      "t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! "
+      //"t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! "
         //"videoconvert ! video/x-raw,format=(string)I420 ! x264enc ! mux.video_0 qtmux name=mux ! filesink location=detected.mp4 "
-        "ximagesink name=img_tensor "
+        //"ximagesink name=img_tensor "
         //"ximagesink name=img_tensor",
         //"fakesink "
       "t_raw. ! queue ! videoconvert ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=false ! "
