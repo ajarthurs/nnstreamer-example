@@ -514,6 +514,19 @@ get_detected_objects (gfloat * detections, gfloat * boxes)
  * @brief Callback for tensor sink signal.
  */
 static void
+new_data_cb2 (GstElement * element, GstBuffer * buffer, gpointer user_data)
+{
+  guint i = 0;
+  gpointer state = NULL;
+  _print_log("called new_data_cb2");
+  GstVideoRegionOfInterestMeta *meta;
+  while((meta = (GstVideoRegionOfInterestMeta *)gst_buffer_iterate_meta(buffer, &state)) && i<MAX_OBJECT_DETECTION) {
+    _print_log("    new_data_cb2: got detection: (%d, %d)", meta->x, meta->y);
+    i++;
+  }
+}
+
+static void
 new_data_cb (GstElement * element, GstBuffer * buffer, gpointer user_data)
 {
   GstMemory *mem_boxes, *mem_detections;
