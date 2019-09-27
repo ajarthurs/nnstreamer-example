@@ -35,7 +35,7 @@ libdl_dep = cc.find_library('dl') # DL library
 thread_dep = dependency('threads') # pthread for tensorflow-lite
 
 # Dependency for custom filter examples
-nns_dep = dependency('nnstreamer', required: false)
+nns_dep = dependency('nnstreamer', required: true)
 
 # Dependency for tensorflow example
 tf_dep = dependency('tensorflow', required: false)
@@ -47,7 +47,7 @@ if tf_dep.found() and protobuf_dep.found()
 endif
 
 # Dependency for tensorflow-lite example
-tflite_dep = dependency('tensorflow-lite', required: false)
+tflite_dep = dependency('tensorflow-lite', required: true)
 
 have_tensorflow_lite = false
 if tflite_dep.found()
