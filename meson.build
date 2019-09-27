@@ -3,8 +3,8 @@ project('nnstreamer-example', 'c', 'cpp',
   license: ['LGPL'],
   meson_version: '>=0.40.0',
   default_options: [
-    'werror=true',
-    'warning_level=1',
+    'werror=false',
+    'warning_level=0',
     'c_std=gnu89',
     'cpp_std=c++11'
   ]
