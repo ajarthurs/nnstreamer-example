@@ -758,7 +758,7 @@ int
 main (int argc, char ** argv)
 {
   const gchar tflite_model_path[] = "./tflite_model";
-  const gchar str_video_file[] = "/demo/sample_1080p.mp4";
+  const gchar str_video_file[] = "./tflite_model/sample_1080p.mp4";
   //const gchar str_video_file[] = "/demo/sample_1080p_rate0p125.mp4";
 
   gchar *str_pipeline;
