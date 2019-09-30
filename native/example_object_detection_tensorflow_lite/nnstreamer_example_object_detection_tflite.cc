@@ -522,7 +522,13 @@ new_data_cb2 (GstElement * element, GstBuffer * buffer, gpointer user_data)
   _print_log("called new_data_cb2");
   GstVideoRegionOfInterestMeta *meta;
   while((meta = (GstVideoRegionOfInterestMeta *)gst_buffer_iterate_meta(buffer, &state)) && i<MAX_OBJECT_DETECTION) {
-    _print_log("    new_data_cb2: got detection: (%d, %d)", meta->x, meta->y);
+    _print_log("    new_data_cb2: got detection %d: <class_label>: (%d, %d): %d x %d",
+      i,
+      meta->x,
+      meta->y,
+      meta->w,
+      meta->h
+      );
     i++;
   }
 }
