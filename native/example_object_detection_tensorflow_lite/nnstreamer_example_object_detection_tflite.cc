@@ -73,6 +73,7 @@
 //#define VIDEO_WIDTH     1024
 //#define VIDEO_HEIGHT    768
 
+const gchar tflite_model_path[] = "./tflite_model";
 const gchar tflite_model[] = "ssd_mobilenet_v1_coco.tflite";
 #define MODEL_WIDTH     300
 #define MODEL_HEIGHT    300
@@ -757,7 +758,6 @@ bus_message_cb (GstBus * bus, GstMessage * message, gpointer user_data)
 int
 main (int argc, char ** argv)
 {
-  const gchar tflite_model_path[] = "./tflite_model";
   const gchar str_video_file[] = "./tflite_model/sample_1080p.mp4";
   //const gchar str_video_file[] = "/demo/sample_1080p_rate0p125.mp4";
 
