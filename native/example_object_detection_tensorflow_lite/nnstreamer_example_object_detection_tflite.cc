@@ -805,15 +805,19 @@ main (int argc, char ** argv)
         "tensor_transform mode=arithmetic option=typecast:float32,add:-127.5,div:127.5 ! "
         "tensor_filter framework=tensorflow-lite model=%s ! "
         //"tensor_filter framework=tensorflow model=%s "
-        //"input=1:%d:%d:3 inputname=normalized_input_image_tensor inputtype=float32 "
-        //"output=1:%d:%d,1:%d:%d outputname=raw_outputs/box_encodings,scale_logits outputtype=float32,float32 ! "
+          //"input=1:%d:%d:3 inputname=normalized_input_image_tensor inputtype=float32 "
+          //"output=1:%d:%d,1:%d:%d outputname=raw_outputs/box_encodings,scale_logits outputtype=float32,float32 ! "
         //"tensor_sink name=tensor_sink emit_signal=true signal_rate=0",
-        "appsink name=tensor_sink",
+        //"tensordecode ! "
+        "tensordecode silent=FALSE labels=%s/%s boxpriors=%s/%s ! "
+        "appsink name=tensor_sink ",
       str_video_file,
       VIDEO_WIDTH, VIDEO_HEIGHT,
-      MODEL_WIDTH, MODEL_HEIGHT
-      //);
-      ,g_app.tflite_info.model_path);
+      MODEL_WIDTH, MODEL_HEIGHT,
+      g_app.tflite_info.model_path,
+      tflite_model_path, tflite_label,
+      tflite_model_path, tflite_box_priors
+      );
       //g_app.tflite_info.model_path,
       //MODEL_WIDTH, MODEL_HEIGHT,
       //DETECTION_MAX, BOX_SIZE, DETECTION_MAX, LABEL_SIZE);
