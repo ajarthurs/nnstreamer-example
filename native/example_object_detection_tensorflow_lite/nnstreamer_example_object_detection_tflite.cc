@@ -521,14 +521,27 @@ new_data_cb2 (GstElement * element, GstBuffer * buffer, gpointer user_data)
   gpointer state = NULL;
   _print_log("called new_data_cb2");
   GstVideoRegionOfInterestMeta *meta;
+  g_mutex_lock (&g_app.mutex);
+  g_app.detected_objects.clear ();
   while((meta = (GstVideoRegionOfInterestMeta *)gst_buffer_iterate_meta(buffer, &state)) && i<MAX_OBJECT_DETECTION) {
     gdouble score;
     GstStructure *s = gst_video_region_of_interest_meta_get_param(meta, "detection");
     const gchar *label = gst_structure_get_string(s, "label_name");
+    guint label_id;
+    gst_structure_get_uint(s, "label_id", &label_id);
     gst_structure_get_double(s, "confidence", &score);
-    _print_log("    new_data_cb2: got detection %d: %s: %.2f%%: (%d, %d): %d x %d",
+    DetectedObject o;
+    o.x = meta->x;
+    o.y = meta->y;
+    o.width = meta->w;
+    o.height = meta->h;
+    o.class_id = label_id;
+    o.score = score;
+    g_app.detected_objects.push_back (o);
+    _print_log("    new_data_cb2: got detection %d: %s (%d): %.2f%%: (%d, %d): %d x %d",
       i,
       label,
+      label_id,
       100.0 * score,
       meta->x,
       meta->y,
@@ -537,6 +550,7 @@ new_data_cb2 (GstElement * element, GstBuffer * buffer, gpointer user_data)
       );
     i++;
   }
+  g_mutex_unlock (&g_app.mutex);
 }
 
 static void
@@ -800,9 +814,9 @@ main (int argc, char ** argv)
       ("filesrc location=%s ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! "
       "video/x-raw,width=%d,height=%d,format=RGB ! tee name=t_raw "
       //"t_raw. ! videoconvert ! cairooverlay name=tensor_res ! "
-      //"t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! "
+      "t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! "
         //"videoconvert ! video/x-raw,format=(string)I420 ! x264enc ! mux.video_0 qtmux name=mux ! filesink location=detected.mp4 "
-        //"ximagesink name=img_tensor "
+        "ximagesink name=img_tensor "
         //"ximagesink name=img_tensor",
         //"fakesink "
       "t_raw. ! queue ! videoconvert ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=false ! "
