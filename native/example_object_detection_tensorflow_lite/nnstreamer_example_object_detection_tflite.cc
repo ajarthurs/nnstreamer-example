@@ -108,7 +108,7 @@ typedef struct
   gint width;
   gint height;
   gint class_id;
-  gfloat prob;
+  gfloat score;
 } DetectedObject;
 
 typedef struct
@@ -375,7 +375,7 @@ parse_qos_message (GstMessage * message)
 static bool
 compare_objs (DetectedObject &a, DetectedObject &b)
 {
-  return a.prob > b.prob;
+  return a.score > b.score;
 }
 
 /**
@@ -438,7 +438,7 @@ nms (std::vector<DetectedObject> &detected)
         _print_log ("y               : %d", detected[i].y);
         _print_log ("width           : %d", detected[i].width);
         _print_log ("height          : %d", detected[i].height);
-        _print_log ("Confidence Score: %f", detected[i].prob);
+        _print_log ("Confidence Score: %f", detected[i].score);
       }
     }
   }
@@ -499,7 +499,7 @@ get_detected_objects (gfloat * detections, gfloat * boxes)
       object.y = y;
       object.width = width;
       object.height = height;
-      object.prob = score;
+      object.score = score;
 
       detected.push_back (object);
     }
@@ -522,14 +522,14 @@ new_data_cb2 (GstElement * element, GstBuffer * buffer, gpointer user_data)
   _print_log("called new_data_cb2");
   GstVideoRegionOfInterestMeta *meta;
   while((meta = (GstVideoRegionOfInterestMeta *)gst_buffer_iterate_meta(buffer, &state)) && i<MAX_OBJECT_DETECTION) {
-    gdouble prob;
+    gdouble score;
     GstStructure *s = gst_video_region_of_interest_meta_get_param(meta, "detection");
     const gchar *label = gst_structure_get_string(s, "label_name");
-    gst_structure_get_double(s, "confidence", &prob);
+    gst_structure_get_double(s, "confidence", &score);
     _print_log("    new_data_cb2: got detection %d: %s: %.2f%%: (%d, %d): %d x %d",
       i,
       label,
-      100.0 * prob,
+      100.0 * score,
       meta->x,
       meta->y,
       meta->w,
