@@ -142,7 +142,7 @@ typedef struct
   TFLiteModelInfo tflite_info; /**< tflite model info */
   CairoOverlayState overlay_state;
   std::vector<DetectedObject> detected_objects;
-  GstElement *tensor_sink;
+  GstElement *appsink;
   GstElement *tensor_res;
 } AppData;
 
@@ -304,9 +304,9 @@ free_app_data (void)
     g_app.bus = NULL;
   }
 
-  if (g_app.tensor_sink) {
-    gst_object_unref (g_app.tensor_sink);
-    g_app.tensor_sink = NULL;
+  if (g_app.appsink) {
+    gst_object_unref (g_app.appsink);
+    g_app.appsink = NULL;
   }
 
   if (g_app.tensor_res) {
@@ -560,7 +560,7 @@ new_data_cb (GstElement * element, GstBuffer * buffer, gpointer user_data)
   GstMapInfo info_boxes, info_detections;
   gfloat *boxes, *detections;
 
-  _print_log("tensor_sink called new_data_cb callback");
+  _print_log("appsink called new_data_cb callback");
   g_return_if_fail (g_app.running);
 
   /**
@@ -724,10 +724,10 @@ bus_message_cb (GstBus * bus, GstMessage * message, gpointer user_data)
 
     case GST_MESSAGE_STEP_DONE: {
       _print_log ("%s: received step-done message", GST_MESSAGE_SRC_NAME(message));
-      if (GST_MESSAGE_SRC(message) == (GstObject *)g_app.tensor_sink) {
+      if (GST_MESSAGE_SRC(message) == (GstObject *)g_app.appsink) {
         GstSample *sample;
-        sample = gst_app_sink_pull_preroll((GstAppSink *)g_app.tensor_sink);
-        new_data_cb2(g_app.tensor_sink, gst_sample_get_buffer(sample), user_data);
+        sample = gst_app_sink_pull_preroll((GstAppSink *)g_app.appsink);
+        new_data_cb2(g_app.appsink, gst_sample_get_buffer(sample), user_data);
         gst_sample_unref(sample);
         _print_log("fetched sample from preroll");
         //gst_element_set_state (g_app.pipeline, GST_STATE_PLAYING);
@@ -830,7 +830,7 @@ main (int argc, char ** argv)
         //"tensor_sink name=tensor_sink emit_signal=true signal_rate=0",
         //"tensordecode ! "
         "tensordecode silent=FALSE labels=%s/%s boxpriors=%s/%s ! "
-        "appsink name=tensor_sink ",
+        "appsink name=appsink ",
       str_video_file,
       VIDEO_WIDTH, VIDEO_HEIGHT,
       MODEL_WIDTH, MODEL_HEIGHT,
@@ -857,10 +857,10 @@ main (int argc, char ** argv)
   g_signal_connect (g_app.bus, "message", G_CALLBACK (bus_message_cb), NULL);
 
   /* tensor sink signal : new data callback */
-  g_app.tensor_sink = gst_bin_get_by_name(GST_BIN (g_app.pipeline), "tensor_sink");
-  //g_signal_connect (g_app.tensor_sink, "new-data", G_CALLBACK (new_data_cb), NULL);
-  //g_signal_connect (g_app.tensor_sink, "new-sample", G_CALLBACK (new_sample_cb), NULL);
-  //g_signal_connect (g_app.tensor_sink, "new-preroll", G_CALLBACK (new_sample_cb), NULL);
+  g_app.appsink = gst_bin_get_by_name(GST_BIN (g_app.pipeline), "appsink");
+  //g_signal_connect (g_app.appsink, "new-data", G_CALLBACK (new_data_cb), NULL);
+  //g_signal_connect (g_app.appsink, "new-sample", G_CALLBACK (new_sample_cb), NULL);
+  //g_signal_connect (g_app.appsink, "new-preroll", G_CALLBACK (new_sample_cb), NULL);
 
   /* cairo overlay */
   g_app.tensor_res = gst_bin_get_by_name (GST_BIN (g_app.pipeline), "tensor_res");
