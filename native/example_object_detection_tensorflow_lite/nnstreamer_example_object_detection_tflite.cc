@@ -662,10 +662,10 @@ draw_overlay_cb (GstElement * overlay, cairo_t * cr, guint64 timestamp,
     label =
         (gchar *) g_list_nth_data (g_app.tflite_info.labels, iter->class_id);
 
-    x = iter->x * VIDEO_WIDTH / MODEL_WIDTH;
-    y = iter->y * VIDEO_HEIGHT / MODEL_HEIGHT;
-    width = iter->width * VIDEO_WIDTH / MODEL_WIDTH;
-    height = iter->height * VIDEO_HEIGHT / MODEL_HEIGHT;
+    x = iter->x; // * VIDEO_WIDTH / MODEL_WIDTH;
+    y = iter->y; // * VIDEO_HEIGHT / MODEL_HEIGHT;
+    width = iter->width; // * VIDEO_WIDTH / MODEL_WIDTH;
+    height = iter->height; // * VIDEO_HEIGHT / MODEL_HEIGHT;
 
     /* draw rectangle */
     _print_log("draw_overlay_cb: drawing rectangle");
@@ -813,23 +813,17 @@ main (int argc, char ** argv)
       g_strdup_printf
       ("filesrc location=%s ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! "
       "video/x-raw,width=%d,height=%d,format=RGB ! tee name=t_raw "
-      //"t_raw. ! videoconvert ! cairooverlay name=tensor_res ! "
-      "t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! "
-        //"videoconvert ! video/x-raw,format=(string)I420 ! x264enc ! mux.video_0 qtmux name=mux ! filesink location=detected.mp4 "
-        "ximagesink name=img_tensor "
-        //"ximagesink name=img_tensor",
-        //"fakesink "
-      "t_raw. ! queue ! videoconvert ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=false ! "
+      "t_raw. ! queue ! decoder.video_sink "
+      "t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! ximagesink name=img_tensor "
+      "t_raw. ! queue ! videoconvert ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=FALSE ! "
       //"t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=false ! "
       //"t_raw. ! queue max-size-buffers=2 leaky=2 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter ! "
         "tensor_transform mode=arithmetic option=typecast:float32,add:-127.5,div:127.5 ! "
-        "tensor_filter framework=tensorflow-lite model=%s ! "
+        "tensor_filter framework=tensorflow-lite model=%s ! decoder.tensor_sink "
         //"tensor_filter framework=tensorflow model=%s "
           //"input=1:%d:%d:3 inputname=normalized_input_image_tensor inputtype=float32 "
           //"output=1:%d:%d,1:%d:%d outputname=raw_outputs/box_encodings,scale_logits outputtype=float32,float32 ! "
-        //"tensor_sink name=tensor_sink emit_signal=true signal_rate=0",
-        //"tensordecode ! "
-        "tensordecode silent=FALSE labels=%s/%s boxpriors=%s/%s ! "
+        "tensordecode name=decoder silent=FALSE labels=%s/%s boxpriors=%s/%s ! "
         "appsink name=appsink ",
       str_video_file,
       VIDEO_WIDTH, VIDEO_HEIGHT,
