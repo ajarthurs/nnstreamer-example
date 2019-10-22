@@ -74,7 +74,8 @@
 //#define VIDEO_HEIGHT    768
 
 const gchar tflite_model_path[] = "./tflite_model";
-const gchar tflite_model[] = "ssd_mobilenet_v1_coco.tflite";
+//const gchar tflite_model[] = "ssd_mobilenet_v1_coco.tflite";
+const gchar tflite_model[] = "ssd_mobilenet_v1_coco.pb";
 #define MODEL_WIDTH     300
 #define MODEL_HEIGHT    300
 #define DETECTION_MAX   1917
@@ -819,16 +820,18 @@ main (int argc, char ** argv)
       //"t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=false ! "
       //"t_raw. ! queue max-size-buffers=2 leaky=2 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter ! "
         "tensor_transform mode=arithmetic option=typecast:float32,add:-127.5,div:127.5 ! "
-        "tensor_filter framework=tensorflow-lite model=%s ! "
-        //"tensor_filter framework=tensorflow model=%s "
-          //"input=1:%d:%d:3 inputname=normalized_input_image_tensor inputtype=float32 "
-          //"output=1:%d:%d,1:%d:%d outputname=raw_outputs/box_encodings,scale_logits outputtype=float32,float32 ! "
+        //"tensor_filter framework=tensorflow-lite model=%s ! "
+        "tensor_filter framework=tensorflow model=%s "
+          "input=1:%d:%d:3 inputname=normalized_input_image_tensor inputtype=float32 "
+          "output=1:%d:%d,1:%d:%d outputname=raw_outputs/box_encodings,scale_logits outputtype=float32,float32 ! "
         "tensordecode name=decoder silent=FALSE labels=%s/%s boxpriors=%s/%s ! "
         "appsink name=appsink ",
       str_video_file,
       VIDEO_WIDTH, VIDEO_HEIGHT,
       MODEL_WIDTH, MODEL_HEIGHT,
       g_app.tflite_info.model_path,
+      MODEL_WIDTH, MODEL_HEIGHT,
+      DETECTION_MAX, BOX_SIZE, DETECTION_MAX, LABEL_SIZE,
       tflite_model_path, tflite_label,
       tflite_model_path, tflite_box_priors
       );
