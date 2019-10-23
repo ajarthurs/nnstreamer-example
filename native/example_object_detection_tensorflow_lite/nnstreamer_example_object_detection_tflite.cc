@@ -592,6 +592,34 @@ new_data_cb (GstElement * element, GstBuffer * buffer, gpointer user_data)
 }
 
 /**
+ * @brief Callback for new-preroll sink signal.
+ */
+static GstFlowReturn
+new_preroll_cb (GstElement * element, gpointer user_data)
+{
+  GstSample *sample;
+  sample = gst_app_sink_pull_preroll((GstAppSink *)element);
+  _print_log("fetched sample from preroll");
+  new_data_cb2(element, gst_sample_get_buffer(sample), user_data);
+  gst_sample_unref(sample);
+  return GST_FLOW_OK;
+}
+
+/**
+ * @brief Callback for new-sample sink signal.
+ */
+static GstFlowReturn
+new_sample_cb (GstElement * element, gpointer user_data)
+{
+  GstSample *sample;
+  sample = gst_app_sink_pull_sample((GstAppSink *)element);
+  _print_log("fetched sample");
+  new_data_cb2(element, gst_sample_get_buffer(sample), user_data);
+  gst_sample_unref(sample);
+  return GST_FLOW_OK;
+}
+
+/**
  * @brief Set window title.
  * @param name GstXImageSink element name
  * @param title window title
@@ -725,11 +753,7 @@ bus_message_cb (GstBus * bus, GstMessage * message, gpointer user_data)
     case GST_MESSAGE_STEP_DONE: {
       _print_log ("%s: received step-done message", GST_MESSAGE_SRC_NAME(message));
       if (GST_MESSAGE_SRC(message) == (GstObject *)g_app.appsink) {
-        GstSample *sample;
-        sample = gst_app_sink_pull_preroll((GstAppSink *)g_app.appsink);
-        new_data_cb2(g_app.appsink, gst_sample_get_buffer(sample), user_data);
-        gst_sample_unref(sample);
-        _print_log("fetched sample from preroll");
+        new_preroll_cb(g_app.appsink, user_data);
         //gst_element_set_state (g_app.pipeline, GST_STATE_PLAYING);
         //g_usleep(1e6);
         //gst_element_set_state (g_app.pipeline, GST_STATE_PAUSED);
@@ -813,10 +837,11 @@ main (int argc, char ** argv)
       g_strdup_printf
       ("filesrc location=%s ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! "
       "video/x-raw,width=%d,height=%d,format=RGB ! tee name=t_raw "
-      "t_raw. ! queue ! decoder.video_sink "
-      "t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! ximagesink name=img_tensor "
-      "t_raw. ! queue ! videoconvert ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=FALSE ! "
-      //"t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=false ! "
+      "t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! decoder.video_sink "
+      "t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! videoconvert name=vc2overlay ! cairooverlay name=tensor_res ! ximagesink name=img_tensor "
+      //"t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! tee name=tt tt. ! queue ! decoder.video_sink tt. ! queue ! ximagesink name=img_tensor "
+      //"t_raw. ! queue ! videoconvert ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=FALSE ! "
+      "t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=FALSE ! "
       //"t_raw. ! queue max-size-buffers=2 leaky=2 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter ! "
         "tensor_transform mode=arithmetic option=typecast:float32,add:-127.5,div:127.5 ! "
         "tensor_filter framework=tensorflow-lite model=%s ! "
@@ -824,7 +849,7 @@ main (int argc, char ** argv)
           //"input=1:%d:%d:3 inputname=normalized_input_image_tensor inputtype=float32 "
           //"output=1:%d:%d,1:%d:%d outputname=raw_outputs/box_encodings,scale_logits outputtype=float32,float32 ! "
         "tensordecode name=decoder silent=FALSE labels=%s/%s boxpriors=%s/%s ! "
-        "appsink name=appsink ",
+        "appsink name=appsink emit-signals=TRUE ",
       str_video_file,
       VIDEO_WIDTH, VIDEO_HEIGHT,
       MODEL_WIDTH, MODEL_HEIGHT,
@@ -852,9 +877,11 @@ main (int argc, char ** argv)
 
   /* tensor sink signal : new data callback */
   g_app.appsink = gst_bin_get_by_name(GST_BIN (g_app.pipeline), "appsink");
-  //g_signal_connect (g_app.appsink, "new-data", G_CALLBACK (new_data_cb), NULL);
-  //g_signal_connect (g_app.appsink, "new-sample", G_CALLBACK (new_sample_cb), NULL);
-  //g_signal_connect (g_app.appsink, "new-preroll", G_CALLBACK (new_sample_cb), NULL);
+  if (!FRAME_STEP) {
+    //g_signal_connect (g_app.appsink, "new-data", G_CALLBACK (new_data_cb), NULL);
+    g_signal_connect (g_app.appsink, "new-sample", G_CALLBACK (new_sample_cb), NULL);
+    g_signal_connect (g_app.appsink, "new-preroll", G_CALLBACK (new_preroll_cb), NULL);
+  }
 
   /* cairo overlay */
   g_app.tensor_res = gst_bin_get_by_name (GST_BIN (g_app.pipeline), "tensor_res");
@@ -865,7 +892,6 @@ main (int argc, char ** argv)
   /* start pipeline */
   if (FRAME_STEP)
     gst_element_set_state (g_app.pipeline, GST_STATE_PAUSED);
-    //gst_element_set_state (g_app.pipeline, GST_STATE_PLAYING);
   else // normal playback
     gst_element_set_state (g_app.pipeline, GST_STATE_PLAYING);
   g_app.running = TRUE;
