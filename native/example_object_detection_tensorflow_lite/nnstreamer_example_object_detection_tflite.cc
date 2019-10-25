@@ -658,14 +658,10 @@ main (int argc, char ** argv)
   /* init pipeline */
   str_pipeline =
       g_strdup_printf
-      ("filesrc location=%s ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! "
-      "video/x-raw,width=%d,height=%d,format=RGB ! tee name=t_raw "
-      "t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! decoder.video_sink "
-      "t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! videoconvert name=vc2overlay ! cairooverlay name=tensor_res ! ximagesink name=img_tensor "
-      //"t_raw. ! queue ! videoconvert ! cairooverlay name=tensor_res ! tee name=tt tt. ! queue ! decoder.video_sink tt. ! queue ! ximagesink name=img_tensor "
-      //"t_raw. ! queue ! videoconvert ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=FALSE ! "
-      "t_raw. ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=0 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter silent=FALSE ! "
-      //"t_raw. ! queue max-size-buffers=2 leaky=2 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter ! "
+      ("filesrc location=%s ! qtdemux name=demux  demux.video_0 ! decodebin ! videoconvert ! videoscale ! videorate ! "
+      "video/x-raw,width=%d,height=%d,format=RGB,framerate=24/1 ! tee name=t_raw "
+      "t_raw. ! queue max-size-buffers=1 max-size-bytes=0 max-size-time=0 ! videoconvert ! cairooverlay name=tensor_res ! ximagesink name=img_tensor "
+      "t_raw. ! queue leaky=2 max-size-buffers=1 max-size-bytes=0 max-size-time=0 ! videoscale ! video/x-raw,width=%d,height=%d ! tensor_converter ! "
         "tensor_transform mode=arithmetic option=typecast:float32,add:-127.5,div:127.5 ! "
         "tensor_filter framework=tensorflow-lite model=%s ! "
         //"tensor_filter framework=tensorflow model=%s "
