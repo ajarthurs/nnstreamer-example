@@ -14,8 +14,6 @@
  * $ export GST_PLUGIN_PATH=$GST_PLUGIN_PATH:<nnstreamer plugin path>
  * $ ./nnstreamer_example_object_detection_tflite
  *
- * Required model and resources are stored at below link
- * https://www.dropbox.com/s/l2ryee8ikbx1as1/float32.tflite?dl=0 -> ssd_mobilenet_v1_coco
  */
 
 #ifndef _GNU_SOURCE
@@ -63,6 +61,11 @@
     } \
   } while (0)
 
+/**
+ * Playback video w.r.t. the NN model's latency.
+ */
+#define FRAME_STEP FALSE
+
 #define Y_SCALE         10.0f
 #define X_SCALE         10.0f
 #define H_SCALE         5.0f
@@ -95,11 +98,8 @@ const gchar tflite_label[] = "coco_labels_list.txt";
 /**
  * @brief Max objects in display.
  */
-//#define MAX_OBJECT_DETECTION 5
 #define MAX_OBJECT_DETECTION 999999
 
-const bool FRAME_STEP = TRUE;
-//const bool FRAME_STEP = FALSE;
 
 typedef struct
 {
@@ -370,148 +370,6 @@ parse_qos_message (GstMessage * message)
 }
 
 /**
- * @brief Compare score of detected objects.
- */
-static bool
-compare_objs (DetectedObject &a, DetectedObject &b)
-{
-  return a.score > b.score;
-}
-
-/**
- * @brief Intersection of union
- */
-static gfloat
-iou (DetectedObject &A, DetectedObject &B)
-{
-  int x1 = std::max (A.x, B.x);
-  int y1 = std::max (A.y, B.y);
-  int x2 = std::min (A.x + A.width, B.x + B.width);
-  int y2 = std::min (A.y + A.height, B.y + B.height);
-  int w = std::max (0, (x2 - x1 + 1));
-  int h = std::max (0, (y2 - y1 + 1));
-  float inter = w * h;
-  float areaA = A.width * A.height;
-  float areaB = B.width * B.height;
-  float o = inter / (areaA + areaB - inter);
-  return (o >= 0) ? o : 0;
-}
-
-/**
- * @brief NMS (non-maximum suppression)
- */
-static void
-nms (std::vector<DetectedObject> &detected)
-{
-  const float threshold_iou = 0.5f;
-  guint boxes_size;
-  guint i, j;
-
-  std::sort (detected.begin (), detected.end (), compare_objs);
-  boxes_size = detected.size ();
-
-  std::vector<bool> del (boxes_size, false);
-  for (i = 0; i < boxes_size; i++) {
-    if (!del[i]) {
-      for (j = i + 1; j < boxes_size; j++) {
-        if (iou (detected.at (i), detected.at (j)) > threshold_iou) {
-          del[j] = true;
-        }
-      }
-    }
-  }
-
-  /* update result */
-  g_mutex_lock (&g_app.mutex);
-
-  g_app.detected_objects.clear ();
-  for (i = 0; i < boxes_size; i++) {
-    if (!del[i]) {
-      g_app.detected_objects.push_back (detected[i]);
-
-      if (DBG) {
-        _print_log ("==============================");
-        _print_log ("Label           : %s",
-            (gchar *) g_list_nth_data (g_app.tflite_info.labels,
-                detected[i].class_id));
-        _print_log ("x               : %d", detected[i].x);
-        _print_log ("y               : %d", detected[i].y);
-        _print_log ("width           : %d", detected[i].width);
-        _print_log ("height          : %d", detected[i].height);
-        _print_log ("Confidence Score: %f", detected[i].score);
-      }
-    }
-  }
-
-  g_mutex_unlock (&g_app.mutex);
-}
-
-#define _expit(x) \
-    (1.f / (1.f + expf (-x)))
-
-/**
- * @brief Get detected objects.
- */
-static void
-get_detected_objects (gfloat * detections, gfloat * boxes)
-{
-  _print_log("called get_detected_objects");
-  const float threshold_score = 0.5f;
-  std::vector<DetectedObject> detected;
-
-  for (int d = 0; d < DETECTION_MAX; d++) {
-    float ycenter =
-        ((boxes[0] / Y_SCALE) * g_app.tflite_info.box_priors[2][d]) +
-        g_app.tflite_info.box_priors[0][d];
-    float xcenter =
-        ((boxes[1] / X_SCALE) * g_app.tflite_info.box_priors[3][d]) +
-        g_app.tflite_info.box_priors[1][d];
-    float h =
-        (float) expf (boxes[2] / H_SCALE) * g_app.tflite_info.box_priors[2][d];
-    float w =
-        (float) expf (boxes[3] / W_SCALE) * g_app.tflite_info.box_priors[3][d];
-
-    float ymin = ycenter - h / 2.f;
-    float xmin = xcenter - w / 2.f;
-    float ymax = ycenter + h / 2.f;
-    float xmax = xcenter + w / 2.f;
-
-    int x = xmin * MODEL_WIDTH;
-    int y = ymin * MODEL_HEIGHT;
-    int width = (xmax - xmin) * MODEL_WIDTH;
-    int height = (ymax - ymin) * MODEL_HEIGHT;
-
-    for (int c = 1; c < LABEL_SIZE; c++) {
-      gfloat score = _expit (detections[c]);
-      /**
-       * This score cutoff is taken from Tensorflow's demo app.
-       * There are quite a lot of nodes to be run to convert it to the useful possibility
-       * scores. As a result of that, this cutoff will cause it to lose good detections in
-       * some scenarios and generate too much noise in other scenario.
-       */
-      if (score < threshold_score)
-        continue;
-
-      DetectedObject object;
-
-      object.class_id = c;
-      object.x = x;
-      object.y = y;
-      object.width = width;
-      object.height = height;
-      object.score = score;
-
-      detected.push_back (object);
-    }
-
-    detections += LABEL_SIZE;
-    boxes += BOX_SIZE;
-  }
-
-  nms (detected);
-}
-
-/**
  * @brief Callback for tensor sink signal.
  */
 static void
@@ -551,44 +409,6 @@ new_data_cb2 (GstElement * element, GstBuffer * buffer, gpointer user_data)
     i++;
   }
   g_mutex_unlock (&g_app.mutex);
-}
-
-static void
-new_data_cb (GstElement * element, GstBuffer * buffer, gpointer user_data)
-{
-  GstMemory *mem_boxes, *mem_detections;
-  GstMapInfo info_boxes, info_detections;
-  gfloat *boxes, *detections;
-
-  _print_log("appsink called new_data_cb callback");
-  g_return_if_fail (g_app.running);
-
-  /**
-   * tensor type is float32.
-   * [0] dim of boxes > BOX_SIZE : 1 : DETECTION_MAX : 1
-   * [1] dim of labels > LABEL_SIZE : DETECTION_MAX : 1 : 1
-   */
-  g_assert (gst_buffer_n_memory (buffer) == 2);
-
-  /* boxes */
-  mem_boxes = gst_buffer_get_memory (buffer, 0);
-  g_assert (gst_memory_map (mem_boxes, &info_boxes, GST_MAP_READ));
-  g_assert (info_boxes.size == BOX_SIZE * DETECTION_MAX * 4);
-  boxes = (gfloat *) info_boxes.data;
-
-  /* detections */
-  mem_detections = gst_buffer_get_memory (buffer, 1);
-  g_assert (gst_memory_map (mem_detections, &info_detections, GST_MAP_READ));
-  g_assert (info_detections.size == LABEL_SIZE * DETECTION_MAX * 4);
-  detections = (gfloat *) info_detections.data;
-
-  get_detected_objects (detections, boxes);
-
-  gst_memory_unmap (mem_boxes, &info_boxes);
-  gst_memory_unmap (mem_detections, &info_detections);
-
-  gst_memory_unref (mem_boxes);
-  gst_memory_unref (mem_detections);
 }
 
 /**
@@ -690,10 +510,10 @@ draw_overlay_cb (GstElement * overlay, cairo_t * cr, guint64 timestamp,
     label =
         (gchar *) g_list_nth_data (g_app.tflite_info.labels, iter->class_id);
 
-    x = iter->x; // * VIDEO_WIDTH / MODEL_WIDTH;
-    y = iter->y; // * VIDEO_HEIGHT / MODEL_HEIGHT;
-    width = iter->width; // * VIDEO_WIDTH / MODEL_WIDTH;
-    height = iter->height; // * VIDEO_HEIGHT / MODEL_HEIGHT;
+    x = iter->x;
+    y = iter->y;
+    width = iter->width;
+    height = iter->height;
 
     /* draw rectangle */
     _print_log("draw_overlay_cb: drawing rectangle");
@@ -886,8 +706,7 @@ main (int argc, char ** argv)
   /* cairo overlay */
   g_app.tensor_res = gst_bin_get_by_name (GST_BIN (g_app.pipeline), "tensor_res");
   g_signal_connect (g_app.tensor_res, "draw", G_CALLBACK (draw_overlay_cb), NULL);
-  g_signal_connect (g_app.tensor_res, "caps-changed", G_CALLBACK (prepare_overlay_cb),
-      NULL);
+  g_signal_connect (g_app.tensor_res, "caps-changed", G_CALLBACK (prepare_overlay_cb), NULL);
 
   /* start pipeline */
   if (FRAME_STEP)
@@ -906,19 +725,8 @@ main (int argc, char ** argv)
   g_app.running = FALSE;
   gst_element_set_state (g_app.pipeline, GST_STATE_NULL);
 
-  ///* cam source element */
-  //element = gst_bin_get_by_name (GST_BIN (g_app.pipeline), "src");
-
-  //gst_element_set_state (element, GST_STATE_READY);
-  //gst_element_set_state (g_app.pipeline, GST_STATE_READY);
-
   g_usleep (200 * 1000);
 
-  //gst_element_set_state (element, GST_STATE_NULL);
-  //gst_element_set_state (g_app.pipeline, GST_STATE_NULL);
-
-  //g_usleep (200 * 1000);
-  //gst_object_unref (element);
 
 error:
   _print_log ("close app..");
