@@ -20,6 +20,7 @@
 #define _GNU_SOURCE
 #endif
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -103,11 +104,11 @@ const gchar tflite_label[] = "coco_labels_list.txt";
 
 typedef struct
 {
-  gint x;
-  gint y;
-  gint width;
-  gint height;
-  gint class_id;
+  guint x;
+  guint y;
+  guint width;
+  guint height;
+  guint class_id;
   gfloat score;
 } DetectedObject;
 
@@ -389,22 +390,24 @@ new_data_cb2 (GstElement * element, GstBuffer * buffer, gpointer user_data)
     gst_structure_get_uint(s, "label_id", &label_id);
     gst_structure_get_double(s, "confidence", &score);
     DetectedObject o;
-    o.x = meta->x;
-    o.y = meta->y;
-    o.width = meta->w;
-    o.height = meta->h;
+    gfloat wscale = (gfloat)VIDEO_WIDTH / UINT_MAX;
+    gfloat hscale = (gfloat)VIDEO_HEIGHT / UINT_MAX;
+    o.x = (guint)(meta->x * wscale);
+    o.y = (guint)(meta->y * hscale);
+    o.width  = (guint)(meta->w * wscale);
+    o.height = (guint)(meta->h * hscale);
     o.class_id = label_id;
     o.score = score;
     g_app.detected_objects.push_back (o);
-    _print_log("    new_data_cb2: got detection %d: %s (%d): %.2f%%: (%d, %d): %d x %d",
+    _print_log("    new_data_cb2: got detection %u: %s (%u): %.2f%%: (%u, %u): %u x %u",
       i,
       label,
       label_id,
       100.0 * score,
-      meta->x,
-      meta->y,
-      meta->w,
-      meta->h
+      o.x,
+      o.y,
+      o.width,
+      o.height
       );
     i++;
   }
