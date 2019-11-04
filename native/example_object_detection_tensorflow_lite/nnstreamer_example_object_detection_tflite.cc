@@ -667,7 +667,7 @@ main (int argc, char ** argv)
         //"tensor_filter framework=tensorflow model=%s "
           //"input=1:%d:%d:3 inputname=normalized_input_image_tensor inputtype=float32 "
           //"output=1:%d:%d,1:%d:%d outputname=raw_outputs/box_encodings,scale_logits outputtype=float32,float32 ! "
-        "tensordecode name=decoder silent=FALSE labels=%s/%s boxpriors=%s/%s ! "
+        "ssddecode name=decoder silent=FALSE labels=%s/%s boxpriors=%s/%s ! "
         "appsink name=appsink emit-signals=TRUE ",
       str_video_file,
       VIDEO_WIDTH, VIDEO_HEIGHT,
